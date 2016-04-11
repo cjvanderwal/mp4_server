@@ -1,13 +1,13 @@
 var mongoose = require('mongoose');
 
 var TaskSchema    = new mongoose.Schema({
-  name: String,
-  description: String,
-  deadline: Date,
-  completed: Boolean,
-  assignedUser: String,
-  assignedUserName: String,
-  dateCreated: Date
+  name: {type:String, required:true},
+  description: {type:String, default: ""},
+  deadline: {type:Date, required:true},
+  completed: {type:Boolean, default: false},
+  assignedUser: {type:String, default: ""},
+  assignedUserName: {type:String, default: "unassigned"},
+  dateCreated: {type:Date, default: Date.now}
 });
 
-module.exports = mongoose.model('Task', TaskSchema);
+module.exports = mongoose.model('task', TaskSchema);
