@@ -79,12 +79,16 @@ userRoute.get(function(req, res) {
   if (typeof(req.query.fields) != "undefined") {fields = JSON.parse(req.query.fields);}
 
   user.find(id, fields, options, function(err, users) {
-    if (err)
-      res.send(err);
+    if (err) {
+      res.status(500);
+      res.json({message: "We don't know what happened!", data: []});
+      return;
+    }
 
     res.json({message:"OK", data:users});
   });
 });
+
 //POST
 userRoute.post(function(req, res) {
 
@@ -95,15 +99,20 @@ userRoute.post(function(req, res) {
       if (!req.body.email)
         message += ' An email is required!';
 
+    res.status(500);
     res.json({message: message, data: []});
     return;
   }
 
   user.create(req.body, function(err, user) {
-    if (err)
-      res.send(err);
+    if (err) {
+      res.status(500);
+      res.json({message: "This email already exists", data:[]});
+      return;
+    }
 
-    res.json({ message: 'User added to database', data:user });
+    res.status(201);
+    res.json({ message: 'User added', data:user });
   });
 });
 
@@ -119,8 +128,10 @@ var userIDRoute = router.route('/users/:userid');
 //GET
 userIDRoute.get(function(req, res) {
   user.findById(req.params.userid, function(err, user) {
-    if (err) {
-      res.send(err);
+    if (err || user === null) {
+      res.status(404);
+      res.json({message: "User not found", data: []});
+      return;
     }
 
     res.json({message: "OK", data:user});
@@ -129,30 +140,46 @@ userIDRoute.get(function(req, res) {
 
 //PUT
 userIDRoute.put(function(req, res) {
-  user.findByIdAndUpdate(req.params.userid, req.body, function(err, user) {
-    if (err)
-      red.send(err);
 
-    if (!user.name || !user.email) {
+  // actually update the user
+  user.findByIdAndUpdate(req.params.userid, req.body, function(err, user) {
+    if (err) {
+      if (err.name == "MongoError") {
+        res.status(500);
+        res.json({message:"This email already exists", data: []});
+      }
+      else {
+        res.status(404);
+        res.json({message:"User not found", data: []});
+      }
+      return;
+    }
+
+    // make sure the required parameters are present
+    if (!req.body.name || req.body.name === "" || !req.body.email || req.body.email === "") {
         var message = 'Validation error:';
-        if (!user.name)
+        if (!req.body.name || req.body.name === "")
           message += ' A name is required!';
-        if (!user.email)
+        if (!req.body.email || req.body.email === "")
           message += ' An email is required!';
 
+      res.status(500);
       res.json({message: message, data: []});
       return;
     }
 
-    res.json({ message: 'User updated', data:user});
+    res.json({ message: 'User updated', data:req.body});
   });
 });
 
 //DELETE
 userIDRoute.delete(function(req, res) {
   user.remove({_id:req.params.userid}, function(err, user) {
-    if (err)
-      res.send(err);
+    if (err) {
+      res.status(404);
+      res.json({message: "User not found", data: []});
+      return;
+    }
 
   res.json({ message: 'User deleted', data:[] });
   });
@@ -171,8 +198,11 @@ taskRoute.get(function(req, res) {
   if (typeof(req.query.fields) != "undefined") {fields = JSON.parse(req.query.fields);}
 
   task.find(id, fields, options, function(err, tasks) {
-    if (err)
-      res.send(err);
+    if (err) {
+      res.status(404);
+      res.json({message:"Task not found", data:[]});
+      return;
+    }
 
     res.json({message:"OK", data:tasks});
   });
@@ -188,16 +218,19 @@ taskRoute.post(function(req, res) {
     if (!req.body.deadline)
       message += ' A deadline is required!';
 
+    res.status(500);
     res.json({message: message, data: []});
     return;
   }
 
   task.create(req.body, function(err, task) {
     if(err){
-      res.send(err);
+      res.status(500);
+      res.json({message:"We don't know what happened!", data: []});
     }
 
-    res.json({ message: 'Task added to database', data:task });
+    res.status(201);
+    res.json({ message: 'Task added', data:task });
   });
 });
 
@@ -214,8 +247,11 @@ var taskIDRoute = router.route('/tasks/:taskid');
 //GET
 taskIDRoute.get(function(req, res) {
   task.findById(req.params.taskid, function(err, task) {
-    if (err)
-      red.send(err);
+    if (err || task === null) {
+      res.status(404);
+      res.json({message: "Task not found", data:[]});
+      return;
+    }
 
     res.json({message: "OK", data:task});
   });
@@ -223,10 +259,14 @@ taskIDRoute.get(function(req, res) {
 
 //PUT
 taskIDRoute.put(function(req, res) {
-  task.findById(req.params.taskid, function(err, task) {
-    if (err)
-      red.send(err);
 
+  task.findByIdAndUpdate(req.params.taskid, req.body, function(err, task) {
+    if (err || task === null) {
+      res.status(404);
+      res.json({message:"Task not found", data: []});
+      return;
+    }
+    
     if (!req.body.name || !req.body.deadline) {
       var message = 'Validation error:';
       if (!req.body.name)
@@ -234,24 +274,36 @@ taskIDRoute.put(function(req, res) {
       if (!req.body.deadline)
         message += ' A deadline is required!';
 
+      res.status(500);
       res.json({message: message, data: []});
       return;
     }
 
-    task.update(req.body, function(err, task) {
-      if (err)
-        res.send(err);
-
-      res.json({ message: 'Task updated', data:task });
-    });
+    res.json({ message: 'Task updated', data:req.body});
   });
+
+
+  // task.findById(req.params.taskid, function(err, task) {
+  //   if (err || task == null)
+  //     red.send(err);
+  //
+  //   task.update(req.body, function(err, task) {
+  //     if (err)
+  //       res.send(err);
+  //
+  //     res.json({ message: 'Task updated', data:task });
+  //   });
+  // });
 });
 
 //DELETE
 taskIDRoute.delete(function(req, res) {
   task.remove({_id:req.params.taskid}, function(err, task) {
-    if (err)
-      res.send(err);
+    if (err) {
+      res.status(404);
+      res.json({message:"Task not found", data:[]});
+      return;
+    }
 
   res.json({ message: 'Task deleted', data:[] });
   });
