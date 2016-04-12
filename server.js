@@ -174,14 +174,15 @@ userIDRoute.put(function(req, res) {
 
 //DELETE
 userIDRoute.delete(function(req, res) {
-  user.remove({_id:req.params.userid}, function(err, user) {
-    if (err) {
+
+  user.findByIdAndRemove(req.params.userid, function(err, user) {
+    if (err || user === null) {
       res.status(404);
       res.json({message: "User not found", data: []});
       return;
     }
 
-  res.json({ message: 'User deleted', data:[] });
+  res.json({ message: 'User deleted', data:user });
   });
 });
 
@@ -266,7 +267,7 @@ taskIDRoute.put(function(req, res) {
       res.json({message:"Task not found", data: []});
       return;
     }
-    
+
     if (!req.body.name || !req.body.deadline) {
       var message = 'Validation error:';
       if (!req.body.name)
@@ -281,25 +282,12 @@ taskIDRoute.put(function(req, res) {
 
     res.json({ message: 'Task updated', data:req.body});
   });
-
-
-  // task.findById(req.params.taskid, function(err, task) {
-  //   if (err || task == null)
-  //     red.send(err);
-  //
-  //   task.update(req.body, function(err, task) {
-  //     if (err)
-  //       res.send(err);
-  //
-  //     res.json({ message: 'Task updated', data:task });
-  //   });
-  // });
 });
 
 //DELETE
 taskIDRoute.delete(function(req, res) {
-  task.remove({_id:req.params.taskid}, function(err, task) {
-    if (err) {
+  task.findByIdAndRemove(req.params.taskid, function(err, task) {
+    if (err || task === null) {
       res.status(404);
       res.json({message:"Task not found", data:[]});
       return;
