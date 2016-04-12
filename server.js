@@ -7,7 +7,7 @@ var bodyParser = require('body-parser');
 var router = express.Router();
 
 //replace this with your Mongolab URL
-mongoose.connect('mongodb://cjvanderwal:password@ds025459.mlab.com:25459/cs498_mp4');
+mongoose.connect('mongodb://user:pw@ds025459.mlab.com:25459/cs498_mp4');
 
 // Create our Express application
 var app = express();
@@ -38,23 +38,27 @@ app.use('/api', router);
 
 // helper function to parse the request string for the database call
 function addOptions(req) {
-  var sort = {};
-  var skip = {};
-  var limit = {};
-  var select = {};
-  var count = {};
-  if (typeof(req.query.sort) != "undefined") {sort = JSON.parse(req.query.sort);}
-  if (typeof(req.query.skip) != "undefined") {skip = JSON.parse(req.query.skip);}
-  if (typeof(req.query.limit) != "undefined") {limit = JSON.parse(req.query.limit);}
-  if (typeof(req.query.select) != "undefined") {select = JSON.parse(req.query.select);}
-  if (typeof(req.query.count) != "undefined") {count = JSON.parse(req.query.count);}
+
   var options = {
-    "sort":sort,
-    "skip":skip,
-    "limit":limit,
-    "select":select,
-    "count":count
-  };
+    where: null,
+    count: null,
+    sort: null,
+    select: null,
+    skip: null,
+    limit: null
+  }
+  if(req.query.where!=null)
+    options['where'] = JSON.parse(req.query.where.replace(/'/, '"'))
+  if(req.query.sort!=null)
+    options['sort'] = JSON.parse(req.query.sort.replace(/'/, '"'))
+  if(req.query.select!=null)
+    options['select'] = JSON.parse(req.query.select.replace(/'/, '"'))
+  if(req.query.skip!=null)
+    options['skip'] = JSON.parse(req.query.skip.replace(/'/, '"'))
+  if(req.query.limit!=null)
+    options['limit'] = JSON.parse(req.query.limit.replace(/'/, '"'))
+  if(req.query.count!=null)
+    options['count'] = JSON.parse(req.query.count.replace(/'/, '"'))
 
   return options;
 }
@@ -78,15 +82,31 @@ userRoute.get(function(req, res) {
   if (typeof(req.query.where) != "undefined") {id = JSON.parse(req.query.where);}
   if (typeof(req.query.fields) != "undefined") {fields = JSON.parse(req.query.fields);}
 
-  user.find(id, fields, options, function(err, users) {
-    if (err) {
-      res.status(500);
-      res.json({message: "We don't know what happened!", data: []});
-      return;
-    }
+  if (!options['count'] || options['count'] === false) {
+    user.find(options['where']).limit(options['limit']).sort(options['sort'])
+        .skip(options['skip']).select(options['select']).exec(function(err, users) {
+      if (err) {
+        res.status(500);
+        res.json({message: "We don't know what happened!", data: []});
+        return;
+      }
 
-    res.json({message:"OK", data:users});
-  });
+      res.json({message:"OK", data:users});
+    });
+  }
+  else {
+    user.find(options['where']).limit(options['limit']).sort(options['sort'])
+        .skip(options['skip']).select(options['select']).count(options['count']).exec(function(err, users) {
+      if (err) {
+        res.status(500);
+        res.json({message: "We don't know what happened!", data: []});
+        return;
+      }
+
+      res.json({message:"OK", data:users});
+    });
+
+  }
 });
 
 //POST
@@ -144,7 +164,7 @@ userIDRoute.put(function(req, res) {
   // actually update the user
   user.findByIdAndUpdate(req.params.userid, req.body, function(err, user) {
     if (err) {
-      if (err.name == "MongoError") {
+      if (err.name === "MongoError") {
         res.status(500);
         res.json({message:"This email already exists", data: []});
       }
@@ -152,6 +172,11 @@ userIDRoute.put(function(req, res) {
         res.status(404);
         res.json({message:"User not found", data: []});
       }
+      return;
+    }
+    if (user === null) {
+      res.status(404);
+      res.json({message:"User not found", data: []});
       return;
     }
 
@@ -198,15 +223,32 @@ taskRoute.get(function(req, res) {
   if (typeof(req.query.where) != "undefined") {id = JSON.parse(req.query.where);}
   if (typeof(req.query.fields) != "undefined") {fields = JSON.parse(req.query.fields);}
 
-  task.find(id, fields, options, function(err, tasks) {
-    if (err) {
-      res.status(404);
-      res.json({message:"Task not found", data:[]});
-      return;
-    }
+  if (!options['count'] || options['count'] === false) {
+    task.find(options['where']).limit(options['limit']).sort(options['sort'])
+        .skip(options['skip']).select(options['select']).exec(function(err, tasks) {
+      if (err) {
+        res.status(500);
+        res.json({message: "Task not found", data: []});
+        return;
+      }
 
-    res.json({message:"OK", data:tasks});
-  });
+      res.json({message:"OK", data:tasks});
+    });
+  }
+
+  else {
+    task.find(options['where']).limit(options['limit']).sort(options['sort'])
+        .skip(options['skip']).select(options['select']).count(options['count']).exec(function(err, tasks) {
+      if (err) {
+        res.status(500);
+        res.json({message: "Task not found", data: []});
+        return;
+      }
+
+      res.json({message:"OK", data:tasks});
+    });
+
+  }
 });
 
 //POST
