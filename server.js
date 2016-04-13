@@ -161,8 +161,7 @@ userIDRoute.get(function(req, res) {
 //PUT
 userIDRoute.put(function(req, res) {
 
-  // actually update the user
-  user.findByIdAndUpdate(req.params.userid, req.body, function(err, user) {
+  user.findById(req.params.userid, function(err, old_user) {
     if (err) {
       if (err.name === "MongoError") {
         res.status(500);
@@ -174,28 +173,43 @@ userIDRoute.put(function(req, res) {
       }
       return;
     }
-    if (user === null) {
+    if (old_user === null) {
       res.status(404);
       res.json({message:"User not found", data: []});
       return;
     }
 
-    // make sure the required parameters are present
-    if (!req.body.name || req.body.name === "" || !req.body.email || req.body.email === "") {
-        var message = 'Validation error:';
-        if (!req.body.name || req.body.name === "")
-          message += ' A name is required!';
-        if (!req.body.email || req.body.email === "")
-          message += ' An email is required!';
+    // make sure the required fields are filled out
+    if (!req.body.name || !req.body.email) {
+      var message = 'Validation error:';
+      if (!req.body.name)
+        message += ' A name is required!';
+      if (!req.body.email)
+        message += ' An email is required!';
 
       res.status(500);
       res.json({message: message, data: []});
       return;
     }
 
-    res.json({ message: 'User updated', data:req.body});
+    user.update(old_user, req.body, function(err, updated_user) {
+      if (err) {
+        res.status(500);
+        res.json({message: "We don't know what happened!", data:[]});
+        return;
+      }
+      user.findById(old_user._id, function(err, new_user) {
+        if (err) {
+          res.status(500);
+          res.json({message: "We don't know what happened!", data:[]});
+          return;
+        }
+        res.json({ message: 'User updated', data:new_user});
+      });
+    });
   });
 });
+
 
 //DELETE
 userIDRoute.delete(function(req, res) {
@@ -207,7 +221,7 @@ userIDRoute.delete(function(req, res) {
       return;
     }
 
-  res.json({ message: 'User deleted', data:user });
+  res.json({ message: 'User deleted', data:[]});
   });
 });
 
@@ -227,7 +241,7 @@ taskRoute.get(function(req, res) {
     task.find(options['where']).limit(options['limit']).sort(options['sort'])
         .skip(options['skip']).select(options['select']).exec(function(err, tasks) {
       if (err) {
-        res.status(500);
+        res.status(404);
         res.json({message: "Task not found", data: []});
         return;
       }
@@ -240,7 +254,7 @@ taskRoute.get(function(req, res) {
     task.find(options['where']).limit(options['limit']).sort(options['sort'])
         .skip(options['skip']).select(options['select']).count(options['count']).exec(function(err, tasks) {
       if (err) {
-        res.status(500);
+        res.status(404);
         res.json({message: "Task not found", data: []});
         return;
       }
@@ -303,13 +317,14 @@ taskIDRoute.get(function(req, res) {
 //PUT
 taskIDRoute.put(function(req, res) {
 
-  task.findByIdAndUpdate(req.params.taskid, req.body, function(err, task) {
-    if (err || task === null) {
+  task.findById(req.params.taskid, function(err, old_task) {
+    if (err || old_task === null) {
       res.status(404);
       res.json({message:"Task not found", data: []});
       return;
     }
 
+    // make sure the required fields are filled out
     if (!req.body.name || !req.body.deadline) {
       var message = 'Validation error:';
       if (!req.body.name)
@@ -322,7 +337,21 @@ taskIDRoute.put(function(req, res) {
       return;
     }
 
-    res.json({ message: 'Task updated', data:req.body});
+    task.update(old_task, req.body, function(err, updated_task) {
+      if (err) {
+        res.status(500);
+        res.json({message: "We don't know what happened!", data:[]});
+        return;
+      }
+      task.findById(old_task._id, function(err, new_task) {
+        if (err) {
+          res.status(500);
+          res.json({message: "We don't know what happened!", data:[]});
+          return;
+        }
+        res.json({ message: 'Task updated', data:new_task});
+      });
+    });
   });
 });
 
