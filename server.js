@@ -192,7 +192,13 @@ userIDRoute.put(function(req, res) {
       return;
     }
 
-    user.update(old_user, req.body, function(err, updated_user) {
+    old_user.name = req.body.name;
+    old_user.email = req.body.email;
+    if (req.body.pendingTasks) {
+      old_user.pendingTasks = req.body.pendingTasks;
+    }
+
+    old_user.save(function(err, updated_user) {
       if (err) {
         res.status(500);
         res.json({message: "We don't know what happened!", data:[]});
